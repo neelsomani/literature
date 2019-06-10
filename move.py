@@ -1,0 +1,59 @@
+"""
+Define how `Players` make moves.
+"""
+
+from actor import Actor
+from card import Card
+from constants import SETS
+
+
+class Move:
+    """
+    An expression that indicates when one `Player` asks another for a `Card`.
+    The `success` attribute indicates whether the `Move` would have succeeded
+    at the time of construction.
+
+    Examples
+    --------
+    >>> move = player_0.asks(player_1).to_give(CardName(3, Suit.SPADES))
+    """
+    def __init__(self,
+                 interrogator: Actor,
+                 respondent: Actor,
+                 card: Card.Name):
+        if card in interrogator.hand:
+            raise ValueError("A player cannot ask for a card they possess")
+        if sum([
+            Card.Name(c, card.suit) in interrogator.hand
+            for c in SETS[card.half_suit().half]
+        ]) == 0:
+            raise ValueError("The player needs at least one card in the set")
+        self.interrogator = interrogator
+        self.respondent = respondent
+        self.card = card
+        self.success = self.card in self.respondent.hand
+
+    def __repr__(self):
+        if self.success:
+            return "{0} took the {1} from {2}".format(self.interrogator,
+                                                      self.card,
+                                                      self.respondent)
+        return "{0} failed to take the {1} from {2}".format(self.interrogator,
+                                                            self.card,
+                                                            self.respondent)
+
+
+class Request:
+    """
+    A `Request` from one `Player` for another `Player`'s `Card`, without
+    specifying the `Card`. This should be instantiated using `Player.asks`.
+    """
+
+    def __init__(self, interrogator: Actor, respondent: Actor):
+        if interrogator.unique_id % 2 == respondent.unique_id % 2:
+            raise ValueError("A player cannot ask their teammate for a card")
+        self.interrogator = interrogator
+        self.respondent = respondent
+
+    def to_give(self, card: Card.Name) -> Move:
+        return Move(self.interrogator, self.respondent, card)

@@ -2,6 +2,8 @@
 Define how `Players` make moves.
 """
 
+from typing import List
+
 from actor import Actor
 from card import Card
 from constants import SETS
@@ -10,8 +12,6 @@ from constants import SETS
 class Move:
     """
     An expression that indicates when one `Player` asks another for a `Card`.
-    The `success` attribute indicates whether the `Move` would have succeeded
-    at the time of construction.
 
     Examples
     --------
@@ -31,16 +31,20 @@ class Move:
         self.interrogator = interrogator
         self.respondent = respondent
         self.card = card
-        self.success = self.card in self.respondent.hand
+
+    def serialize(self) -> List[int]:
+        """ Serialize this `Move` into a list of integers. """
+        return [
+            self.interrogator.unique_id,
+            self.respondent.unique_id,
+            self.card.suit.value,
+            self.card.rank.value
+        ]
 
     def __repr__(self):
-        if self.success:
-            return "{0} took the {1} from {2}".format(self.interrogator,
-                                                      self.card,
-                                                      self.respondent)
-        return "{0} failed to take the {1} from {2}".format(self.interrogator,
-                                                            self.card,
-                                                            self.respondent)
+        return "{0} requested the {1} from {2}".format(self.interrogator,
+                                                       self.card,
+                                                       self.respondent)
 
 
 class Request:

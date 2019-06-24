@@ -7,7 +7,6 @@ construct `Moves`.
 from typing import (
     List,
     Dict,
-    Tuple,
     Optional,
     Set,
     Union
@@ -75,6 +74,8 @@ class Player(Actor):
             Actor(i): Player(i, hand=[], n_players=n_players, dummy=True)
             for i in range(n_players) if not dummy
         }
+        # `self.claims` simply keeps tracks of the claims that have been made
+        self.claims: Set[HalfSuit] = set()
 
         # Initialize knowledge
         _cards = [Card.Name(i, suit) for i in MAJOR | MINOR for suit in Suit]
@@ -106,13 +107,10 @@ class Player(Actor):
             suits[c.suit].append(c)
         return PrintableDict(suits)
 
-    def make_move(self) -> Move:
-        raise NotImplementedError
-
-    def evaluate_claims(self) -> Dict[HalfSuit, List[Tuple[Card, Actor]]]:
+    def evaluate_claims(self) -> Dict[HalfSuit, Dict[Card.Name, Actor]]:
         """
         Return a dictionary mapping claimable half suits to the `Players`
-        who hold each `Card`.
+        who hold each `Card.Name`.
         """
         claims = {
             HalfSuit(h, s): self._calculate_claim(HalfSuit(h, s))
@@ -121,20 +119,23 @@ class Player(Actor):
         # Remove partial claims
         return {h: claims[h] for h in claims if len(claims[h]) == 6}
 
-    def _calculate_claim(self, half: HalfSuit) -> List:
+    def has_no_cards(self):
+        """ Return whether this `Player` is still in the game. """
+        return not any(c.half_suit() not in self.claims for c in self.hand)
+
+    def _calculate_claim(self, half: HalfSuit) -> Dict[Card.Name, Actor]:
         """
-        Return a list of (`Card`, `Actor`) tuples for who on our team
-        has each card.
+        Indicate who on our team has each card.
         """
         team = self.unique_id % 2
-        return [(Card.Name(i, half.suit), Actor(p))
+        return {Card.Name(i, half.suit): Actor(p)
                 for p in range(team, len(self.knowledge), 2)
                 for i in SETS[half.half]
                 if self.knowledge[Actor(p)][
                     Card.Name(i, half.suit)
-                ] == Card.State.DOES_POSSESS]
+                ] == Card.State.DOES_POSSESS}
 
-    def memorize_move(self, move: Move) -> None:
+    def memorize_move(self, move: Move, success: bool) -> None:
         """
         Make all possible deductions from a given `Move`.
 
@@ -142,20 +143,23 @@ class Player(Actor):
         ----------
         move : Move
             The `Move` that was executed in the game
+        success : bool
+            Whether the `Move` was completed successfully
 
         Examples
         --------
         >>> self.memorize_move(player_0.asks(player_1)
-        ...                            .to_give(Card.Name(2, Suit.DIAMONDS)))
+        ...                            .to_give(Card.Name(2, Suit.DIAMONDS)),
+        ...                    success=True)
         """
         if len(self.dummy_players) != 0:
             # If this isn't a dummy `Player` object, then update our dummy
             # `Players`
-            self._inform_dummy_players(move)
+            self._inform_dummy_players(move, success)
         if self.suit_knowledge[move.interrogator][move.card.half_suit()] == 0:
             # The player must have had a card in order to ask the question
             self.suit_knowledge[move.interrogator][move.card.half_suit()] = 1
-        if move.success:
+        if success:
             # The interrogator must now have one more card than we thought
             # before
             self.suit_knowledge[move.interrogator][move.card.half_suit()] += 1
@@ -172,12 +176,25 @@ class Player(Actor):
             self._memorize(Knowledge.that(move.interrogator).lacks(move.card))
         self._memorize(Knowledge.that(move.respondent).lacks(move.card))
 
-    def _inform_dummy_players(self, move: Move) -> None:
+    def memorize_claim(self, possessions: Dict[Card.Name, Actor]):
+        """
+        Memorize all information from a successful claim. This function
+        should only take in successful claims as input.
+        """
+        if len(possessions) != 6:
+            raise ValueError('There should be exactly six possessions')
+        # Get a random key and add the half suit to claims
+        half_suit = list(possessions.keys())[0].half_suit()
+        self.claims.add(half_suit)
+        for c, a in possessions.items():
+            self._memorize(Knowledge.that(a).has(c))
+
+    def _inform_dummy_players(self, move: Move, success: bool) -> None:
         """ Update our `Player`'s mental model of where other `Players`
         think cards have gone. """
         # Update all dummy `Players` with the move
         for p in self.dummy_players:
-            self.dummy_players[p].memorize_move(move)
+            self.dummy_players[p].memorize_move(move, success=success)
 
     def asks(self, respondent: Actor) -> Request:
         """
@@ -202,6 +219,32 @@ class Player(Actor):
 
     def gains(self, card: Card.Name) -> None:
         self.hand.add(card)
+
+    def serialize(self) -> List[int]:
+        """
+        Serialize this `Player`'s state as a list of integers.
+        """
+        output = [self.unique_id]
+        # Order the suits and ranks so the serialization is consistent
+        _ord_suits = [Suit.CLUBS, Suit.DIAMONDS, Suit.HEARTS, Suit.SPADES]
+        _ord_ranks = list(range(1, 7)) + list(range(8, 14))
+        for i in range(len(self.knowledge)):
+            for s, j in [(s, j) for j in _ord_ranks for s in _ord_suits]:
+                output.append(
+                    self.knowledge[Actor(i)][Card.Name(j, s)].value
+                )
+
+            for h, s in [(h, s) for h in Half for s in _ord_suits]:
+                output.append(self.suit_knowledge[Actor(i)][HalfSuit(h, s)])
+
+            output.append(self.n_cards[Actor(i)])
+
+        for k in range(len(self.dummy_players)):
+            output.extend(
+                self.dummy_players[Actor(k)].serialize()
+            )
+
+        return output
 
     def _cards_not_in_half(self, player: Actor, half: HalfSuit) -> int:
         """

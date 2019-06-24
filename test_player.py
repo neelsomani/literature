@@ -4,13 +4,15 @@ from typing import List
 
 import pytest
 
+from actor import Actor
 from card import (
     Card,
     Suit,
     HalfSuit,
     Half
 )
-from literature import Literature
+from constants import SETS
+from literature import Literature, Team
 
 
 def get_mock_hands(_: int) -> List[List[Card.Name]]:
@@ -27,10 +29,26 @@ def get_mock_hands(_: int) -> List[List[Card.Name]]:
     ]
 
 
+def single_mock(_: int) -> List[List[Card.Name]]:
+    return [
+        [Card.Name(r, s)
+         for r in SETS[Half.MINOR] | SETS[Half.MAJOR] for s in Suit],
+        [],
+        [],
+        []
+    ]
+
+
 @pytest.fixture()
 def game():
     # Pick the first player to start
     return Literature(4, hands_fn=get_mock_hands, turn_picker=lambda: 0)
+
+
+@pytest.fixture()
+def single_player_game():
+    # Give a single player all of the cards
+    return Literature(4, hands_fn=single_mock, turn_picker=lambda: 0)
 
 
 def test_card_transfer(game):
@@ -80,11 +98,27 @@ def test_memorizing(game):
 def test_evaluate_claims(game):
     player_0 = game.players[0]
     assert len(player_0.evaluate_claims()) == 0
-    game.commit_move(player_0.asks(game.players[1])
-                             .to_give(Card.Name(3, Suit.CLUBS)))
-    for i in [1, 4, 5, 6]:
+    game.commit_text('1 3C')
+    for i in (1, 4, 5, 6):
         game.commit_move(player_0.asks(game.players[3])
                                  .to_give(Card.Name(i, Suit.CLUBS)))
 
     claims = player_0.evaluate_claims()
     assert HalfSuit(Half.MINOR, Suit.CLUBS) in claims and len(claims) == 1
+
+
+def test_learning_from_claims(single_player_game):
+    claim = {Card.Name(r, Suit.CLUBS): Actor(0) for r in SETS[Half.MINOR]}
+    assert single_player_game.commit_claim(claim)
+    player_1 = single_player_game.players[1]
+    assert all([
+        player_1.knowledge[Actor(0)][
+            Card.Name(r, Suit.CLUBS)
+        ] == Card.State.DOES_POSSESS for r in SETS[Half.MINOR]
+    ])
+    single_player_game.commit_text(
+        'CLAIM 0 1D 0 2D 0 3D 0 4D 0 5D 0 6D'
+    )
+    assert single_player_game.claims[
+        HalfSuit(Half.MINOR, Suit.DIAMONDS)
+    ] == Team.EVEN

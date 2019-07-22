@@ -135,6 +135,49 @@ class Player(Actor):
                     Card.Name(i, half.suit)
                 ] == Card.State.DOES_POSSESS}
 
+    def _basic_validity(self, card: Card.Name) -> bool:
+        """ Return whether we can legally ask for this `Card`. """
+        if not any([Card.Name(r, card.suit) in self.hand
+                    for r in SETS[card.half_suit().half]]):
+            return False
+        if card in self.hand:
+            return False
+        if card.half_suit() in self.claims:
+            return False
+        return True
+
+    def valid_ask(self,
+                  respondent: "Player",
+                  card: Card.Name,
+                  use_all_knowledge=True) -> bool:
+        """
+        Return whether it is reasonable for this `Player` to construct
+        a `Move` with the input values. Specifically, check that this `Player`
+        has a `Card` in the relevant `HalfSet` and that the other `Player`
+        might possess the `Card`.
+
+        If `use_all_knowledge` is True, then only return `True` if the
+        `respondent` potentially has the `Card` in question. Otherwise,
+        return `True` even if the respondent certainly does not have the card
+        in question. This is useful because in general, a `Player` should use
+        the knowledge that they have about other `Players`, but there are cases
+        when no such `Move` exists, and a `Player` is forced to ask a `Player`
+        for a `Card`, even when they know with certainty the other `Player`
+        does not possess the `Card`. This might still be useful to signal to
+        teammates what `Card` this `Player` does or does not possess.
+        """
+        if respondent.unique_id % 2 == self.unique_id % 2:
+            return False
+        if respondent.has_no_cards():
+            return False
+        if use_all_knowledge and self.knowledge[respondent][
+            card
+        ] == Card.State.DOES_NOT_POSSESS:
+            return False
+        if not self._basic_validity(card):
+            return False
+        return True
+
     def memorize_move(self, move: Move, success: bool) -> None:
         """
         Make all possible deductions from a given `Move`.

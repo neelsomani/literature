@@ -166,7 +166,7 @@ class GameHandler:
             for h in claims:
                 if self.game.claims[h] != Team.NEITHER:
                     continue
-                self.game.commit_claim(claims[h])
+                self.game.commit_claim(p, claims[h])
 
     def play_interactive(self, model: Model, delay: int = 0) -> None:
         """

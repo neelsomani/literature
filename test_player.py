@@ -111,7 +111,7 @@ def test_evaluate_claims(game):
 
 def test_learning_from_claims(single_player_game):
     claim = {Card.Name(r, Suit.CLUBS): Actor(0) for r in SETS[Half.MINOR]}
-    assert single_player_game.commit_claim(claim)
+    assert single_player_game.commit_claim(Actor(0), claim)
     player_1 = single_player_game.players[1]
     assert all([
         player_1.knowledge[Actor(0)][

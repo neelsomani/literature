@@ -105,6 +105,8 @@ def test_evaluate_claims(game):
 
     claims = player_0.evaluate_claims()
     assert HalfSuit(Half.MINOR, Suit.CLUBS) in claims and len(claims) == 1
+    # Ensure that we don't make claims for the opposing team
+    assert len(game.players[1].evaluate_claims()) == 0
 
 
 def test_learning_from_claims(single_player_game):

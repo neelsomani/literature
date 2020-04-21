@@ -121,7 +121,7 @@ class Player(Actor):
 
     def has_no_cards(self):
         """ Return whether this `Player` is still in the game. """
-        return not any(c.half_suit() not in self.claims for c in self.hand)
+        return all(c.half_suit() in self.claims for c in self.hand)
 
     def _calculate_claim(self, half: HalfSuit) -> Dict[Card.Name, Actor]:
         """

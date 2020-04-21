@@ -75,6 +75,7 @@ class Team(Enum):
     EVEN = 0
     ODD = 1
     NEITHER = 2
+    DISCARD = 3
 
 
 def get_game(n_players: int) -> "Literature":
@@ -167,19 +168,56 @@ class Literature:
                 return p
         raise KeyError('There is no player with that ID')
 
-    def commit_claim(self, possessions: Dict[Card.Name, Actor]) -> bool:
+    def _claim_for_half_suit(self, h: HalfSuit) -> Dict[Card.Name, Actor]:
+        possessions: Dict[Card.Name, Actor] = {}
+        for c in [Card.Name(r, h.suit) for r in SETS[h.half]]:
+            for p in self.players:
+                if c in p.hand:
+                    possessions[c] = p
+        return possessions
+
+    def switch_turn(self) -> bool:
+        """ Switch the turn to the opposing team if possible. """
+        other = (self.turn.unique_id + 1) % 2
+        next_players = [p for p in self.players
+                        if p.unique_id % 2 == other and not p.has_no_cards()]
+        if len(next_players) == 0:
+            return False
+        self.turn = next_players[int(random.random() * len(next_players))]
+        return True
+
+    def commit_claim(self,
+                     player: Actor,
+                     possessions: Dict[Card.Name, Actor]) -> bool:
         """
         Return whether or not the claim was successfully made.
 
         If the claim was successful, note that the `Team` successfully made
         the claim. We do not currently penalize incorrect claims, since the
         bots will never make a claim with uncertainty.
+
+        Parameters
+        ----------
+        player : Actor
+            The Player that is making the claim
+        possessions : Dict[Card.Name, Actor]
+            A map from card name to the Player who possesses the card. The
+            map must contain an entry for every card in the half suit, and all
+            Players in the map must belong to the same team.
         """
-        _validate_possessions(possessions)
+        _validate_possessions(player, possessions)
+
         claimed = set()
-        random_key = list(possessions.keys())[0]
-        half_suit = random_key.half_suit()
-        team = Team(possessions[random_key].unique_id % 2)
+        _random_key = list(possessions.keys())[0]
+        half_suit = _random_key.half_suit()
+
+        # Once a claim is submitted, all players must show the cards they
+        # have for that half suit
+        actual = self._claim_for_half_suit(half_suit)
+        for p in self.players:
+            p.memorize_claim(actual)
+
+        team = Team(player.unique_id % 2)
         for c, a in possessions.items():
             # Get the actual `Player` object, since `commit_claims` can
             # take an `Actor`.
@@ -191,16 +229,23 @@ class Literature:
                 for r in SETS[half_suit.half]]) != 6:
             self.logger.info('Team {0} failed to claim {1}'.format(team,
                                                                    half_suit))
+            if any(p.unique_id % 2 != player.unique_id % 2
+                   for p in actual.values()):
+                other = Team((player.unique_id + 1) % 2)
+                self.logger.info('The claim goes to team {0}'.format(other))
+                self.claims[half_suit] = other
+            else:
+                self.logger.info('The claim is discarded')
+                self.claims[half_suit] = Team.DISCARD
             return False
 
         self.claims[half_suit] = team
         self.logger.info('Team {0} successfully claimed {1}'.format(team,
                                                                     half_suit))
 
-        for p in self.players:
-            p.memorize_claim(possessions)
-
-        # Change the turn if needed
+        # Change the turn if needed. By default, the turn goes to the player
+        # who made the claim.
+        self.turn = self._actor_to_player(player)
         if self.turn.has_no_cards():
             self.logger.info('{0} is out of cards'.format(self.turn))
             teammates = [p for p in self.players
@@ -208,7 +253,7 @@ class Literature:
                          and not p.has_no_cards()]
             if len(teammates) == 0:
                 # If no teammates have any cards, the game should be finished.
-                # More claims might be made.
+                # More claims might be made by the opposing team.
                 return True
 
             self.turn = teammates[int(random.random() * len(teammates))]
@@ -253,13 +298,15 @@ class Literature:
         if not self.completed:
             raise ValueError('The game is not completed')
 
-        team_0 = sum([self.claims[HalfSuit(h, s)] == Team.EVEN
-                      for h in Half for s in Suit])
-        if team_0 > 4:
+        scores = {
+            t: sum(self.claims[HalfSuit(h, s)] == t for h in Half for s in Suit)
+            for t in Team
+        }
+        if scores[Team.EVEN] > scores[Team.ODD]:
             return Team.EVEN
-        if team_0 == 4:
-            return Team.NEITHER
-        return Team.ODD
+        elif scores[Team.ODD] > scores[Team.EVEN]:
+            return Team.ODD
+        return Team.NEITHER
 
     def _text_claim(self, move_components: List[str]) -> None:
         if move_components[0] != 'CLAIM':
@@ -274,7 +321,7 @@ class Literature:
             card_str = move_components.pop(0)
             card = _str_to_card(rank_str=card_str[:-1], suit_str=card_str[-1])
             claim[card] = actor
-        self.commit_claim(claim)
+        self.commit_claim(self.turn, claim)
 
     def _text_move(self, move_components: List[str]) -> None:
         if len(move_components) != 2:
@@ -285,14 +332,17 @@ class Literature:
         self.commit_move(self.turn.asks(player).to_give(card))
 
 
-def _validate_possessions(possessions: Dict[Card.Name, Actor]):
+def _validate_possessions(player: Actor, possessions: Dict[Card.Name, Actor]):
     """ Validate that the claim is defined properly. """
     if len(possessions) != 6:
         raise ValueError("You must specify exactly six cards' locations")
 
     actor_teams = [possessions[k].unique_id % 2 for k in possessions]
-    if not all(v == actor_teams[0] for v in actor_teams):
-        raise ValueError('All cards must belong to the same team')
+    if not all(v == player.unique_id % 2 for v in actor_teams):
+        raise ValueError(
+            'All cards must belong to the same team as the player ' +
+            'making the claim'
+        )
 
     half_suits = [c.half_suit() for c in possessions]
     if not all(h == half_suits[0] for h in half_suits):

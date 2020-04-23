@@ -158,6 +158,7 @@ class Literature:
         # Otherwise, the turn changes
         else:
             self.turn = respondent
+            self._switch_turn_if_no_cards()
         # Update everyone's knowledge
         for p in self.players:
             p.memorize_move(move, success=success)
@@ -185,6 +186,20 @@ class Literature:
             return False
         self.turn = next_players[int(random.random() * len(next_players))]
         return True
+
+    def _switch_turn_if_no_cards(self) -> None:
+        """
+        If `self.turn` has no cards, then switch to a teammate if possible.
+        """
+        if self.turn.has_no_cards():
+            self.logger.info('{0} is out of cards'.format(self.turn))
+            teammates = [p for p in self.players
+                         if p.unique_id % 2 == self.turn.unique_id % 2
+                         and not p.has_no_cards()]
+            if len(teammates) != 0:
+                # If no teammates have any cards, the game should be finished.
+                # More claims might be made by the opposing team.
+                self.turn = teammates[int(random.random() * len(teammates))]
 
     def commit_claim(self,
                      player: Actor,
@@ -246,18 +261,7 @@ class Literature:
         # Change the turn if needed. By default, the turn goes to the player
         # who made the claim.
         self.turn = self._actor_to_player(player)
-        if self.turn.has_no_cards():
-            self.logger.info('{0} is out of cards'.format(self.turn))
-            teammates = [p for p in self.players
-                         if p.unique_id % 2 == self.turn.unique_id % 2
-                         and not p.has_no_cards()]
-            if len(teammates) == 0:
-                # If no teammates have any cards, the game should be finished.
-                # More claims might be made by the opposing team.
-                return True
-
-            self.turn = teammates[int(random.random() * len(teammates))]
-
+        self._switch_turn_if_no_cards()
         return True
 
     def print_winner(self) -> None:

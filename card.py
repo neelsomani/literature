@@ -111,6 +111,9 @@ class Card:
         def __repr__(self):
             return "{0} of {1}".format(self.rank, self.suit.name[0])
 
+        def serialize(self):
+            return "{0}{1}".format(self.rank, self.suit.name[0])
+
         def half_suit(self) -> HalfSuit:
             """
             Convenience method to easily get the `HalfSuit` of this `Card`.
@@ -137,6 +140,38 @@ class Card:
 
     def __eq__(self, other):
         return self.name == other.name and self.state == other.state
+
+
+def deserialize(rank: str, suit: str) -> Card.Name:
+    """
+    Convert a serialized card string to a `Card.Name`.
+
+    Parameters
+    ----------
+    rank : str
+        A, 2, 3, ..., 10, J, Q, K
+    suit : str
+        C, D, H, S
+    """
+    suit_map = {
+        'C': Suit.CLUBS,
+        'D': Suit.DIAMONDS,
+        'H': Suit.HEARTS,
+        'S': Suit.SPADES
+    }
+    return Card.Name(_map_rank(rank), suit_map[suit])
+
+
+def _map_rank(rank: str) -> Rank:
+    if rank == 'J':
+        return Rank(11)
+    elif rank == 'Q':
+        return Rank(12)
+    elif rank == 'K':
+        return Rank(13)
+    elif rank == 'A':
+        return Rank(1)
+    return Rank(int(rank))
 
 
 def get_hands(n_hands: int) -> List[List[Card.Name]]:

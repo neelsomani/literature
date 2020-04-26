@@ -6,7 +6,7 @@ interface for other classes.
 from functools import total_ordering
 from typing import Union, Set
 
-from card import Card
+from literature.card import Card
 
 
 @total_ordering

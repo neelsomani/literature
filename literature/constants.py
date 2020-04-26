@@ -28,8 +28,8 @@ SETS: Dict[Half, Set[int]] = {
 }
 
 # Convenience constants
-MINOR = SETS[Half.MINOR]
-MAJOR = SETS[Half.MAJOR]
+MINOR: Set[int] = SETS[Half.MINOR]
+MAJOR: Set[int] = SETS[Half.MAJOR]
 
 RANK_NAMES = {i: str(i) for i in range(2, 11)}
 RANK_NAMES[1] = "A"

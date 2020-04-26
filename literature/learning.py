@@ -13,12 +13,12 @@ from typing import Dict, Optional, Set
 import numpy as np
 from sklearn.neural_network import MLPRegressor
 
-from actor import Actor
-from card import Card, Suit
-from constants import Half, SETS
-from literature import get_game, Team
-from move import Move
-from player import Player
+from literature.actor import Actor
+from literature.card import Card, Suit
+from literature.constants import Half, SETS
+from literature.literature import get_game, Team
+from literature.move import Move
+from literature.player import Player
 
 # The number of elements in the serialized move
 MOVE_LENGTH = 1149

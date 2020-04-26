@@ -4,15 +4,15 @@ from typing import List
 
 import pytest
 
-from actor import Actor
-from card import (
+from literature.actor import Actor
+from literature.card import (
     Card,
     Suit,
     HalfSuit,
     Half
 )
-from constants import SETS
-from literature import Literature, Team
+from literature.constants import SETS
+from literature.literature import Literature, Team
 
 MISSING_CARD = Card.Name(3, Suit.CLUBS)
 
@@ -49,6 +49,8 @@ def test_turn_change(game):
     c = claims_1.pop(HalfSuit(Half.MAJOR, Suit.DIAMONDS))
     game.commit_claim(Actor(1), c)
     assert game.turn == Actor(1)
+    with pytest.raises(ValueError):
+        game.commit_claim(Actor(1), c)
 
 
 def test_end_game_condition(game):

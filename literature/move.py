@@ -4,9 +4,9 @@ Define how `Players` make moves.
 
 from typing import List
 
-from actor import Actor
-from card import Card
-from constants import SETS
+from literature.actor import Actor
+from literature.card import Card
+from literature.constants import SETS
 
 
 class Move:

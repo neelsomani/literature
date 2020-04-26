@@ -13,7 +13,7 @@ from typing import (
     Union
 )
 
-from constants import (
+from literature.constants import (
     Half,
     MINOR,
     MAJOR,

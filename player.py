@@ -12,24 +12,24 @@ from typing import (
     Union
 )
 
-from actor import Actor
-from card import (
+from literature.actor import Actor
+from literature.card import (
     Card,
     HalfSuit,
     Suit
 )
-from constants import (
+from literature.constants import (
     Half,
     MINOR,
     MAJOR,
     SETS
 )
-from knowledge import (
+from literature.knowledge import (
     ConcreteKnowledge,
     Knowledge
 )
-from move import Move, Request
-from util import PrintableDict
+from literature.move import Move, Request
+from literature.util import PrintableDict
 
 
 class Player(Actor):
@@ -99,6 +99,10 @@ class Player(Actor):
         for card in hand_set:
             self._memorize(Knowledge.that(self).has(card))
             self.suit_knowledge[self][card.half_suit()] += 1
+
+    def unclaimed_cards(self) -> int:
+        """ Return the number of unclaimed cards this Player has. """
+        return len([c for c in self.hand if c.half_suit() not in self.claims])
 
     def hand_to_dict(self) -> PrintableDict:
         """ Get a `PrintableDict` of this `Player`'s hand. """

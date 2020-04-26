@@ -57,19 +57,18 @@ import logging
 from typing import Callable, Dict, List
 import random
 
-from actor import Actor
-from card import (
+from literature.actor import Actor
+from literature.card import (
     Card,
     deserialize,
     get_hands,
     HalfSuit,
-    Rank,
     Suit
 )
-from constants import Half, SETS
-from move import Move
-from player import Player
-from util import PrintableDict
+from literature.constants import Half, SETS
+from literature.move import Move
+from literature.player import Player
+from literature.util import PrintableDict
 
 
 class Team(Enum):
@@ -107,7 +106,6 @@ class Literature:
         hands = hands_fn(n_players)
         self.players = [Player(i, hands[i], n_players)
                         for i in range(n_players)]
-
         self.turn: Player = self.players[int(turn_picker() * n_players)]
         self.logger = logging.getLogger(__name__)
         # `self.claims` maps `HalfSuits` to the `Team` who successfully made
@@ -115,6 +113,9 @@ class Literature:
         self.claims = PrintableDict({
             HalfSuit(h, s): Team.NEITHER for h in Half for s in Suit
         })
+        # `self.actual_possessions` saves the correct mapping of cards for
+        # a `HalfSuit`
+        self.actual_possessions: Dict[HalfSuit, Dict[Card.Name, Actor]] = {}
         self.move_ledger: List[Move] = []
         self.move_success: List[bool] = []
 
@@ -226,10 +227,13 @@ class Literature:
         claimed = set()
         _random_key = list(possessions.keys())[0]
         half_suit = _random_key.half_suit()
+        if half_suit in self.actual_possessions:
+            raise ValueError('{} has already been claimed'.format(half_suit))
 
         # Once a claim is submitted, all players must show the cards they
         # have for that half suit
         actual = self._claim_for_half_suit(half_suit)
+        self.actual_possessions[half_suit] = actual
         for p in self.players:
             p.memorize_claim(actual)
 

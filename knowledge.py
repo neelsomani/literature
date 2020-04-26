@@ -2,8 +2,8 @@
 Classes to express whether `Players` have or don't have particular `Cards`.
 """
 
-from card import Card
-from move import Actor
+from literature.card import Card
+from literature.move import Actor
 
 
 class ConcreteKnowledge:

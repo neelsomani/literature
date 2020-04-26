@@ -22,7 +22,7 @@ setup(
         'scikit-learn==0.21.3'
     ],
     classifiers=[
-        '5 - Production/Stable',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'Topic :: Games/Entertainment',
         'License :: OSI Approved :: MIT License',

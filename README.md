@@ -5,11 +5,33 @@ Literature card game implementation: https://en.wikipedia.org/wiki/Literature_(c
 
 ## Setup
 
-Install with `pip install literature`.
+Install with `pip install literature`. Built for Python 3.6.0.
 
-Start with `python3 -i literature.py`. Built for Python 3.6.0.
+Example gameplay:
 
-See how to train a model to play against with `python3 learning.py -h`. Play against a model that I trained with `learning.play_against_model('model_10000.out')`.
+```
+>>> import literature
+>>> l = literature.get_game(4)
+>>> l.turn
+Player 3
+>>> l.players[3].hand_to_dict()
+Suit.CLUBS: [A of C, K of C]
+Suit.DIAMONDS: [2 of D, 10 of D, J of D, Q of D, K of D]
+Suit.HEARTS: [A of H, 5 of H, J of H]
+Suit.SPADES: [A of S, Q of S]
+>>> move = l.players[3].asks(l.players[2]).to_give(Card.Name(3, Suit.DIAMONDS))
+>>> l.commit_move(move)
+Failure: Player 3 requested the 3 of D from Player 2
+```
+
+Play against a model that I trained with:
+
+```
+import literature
+literature.learning.play_against_model('literature/model_10000.out')
+```
+
+See `literature.py` for documentation.
 
 ## Limitations
 

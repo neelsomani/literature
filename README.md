@@ -10,8 +10,10 @@ Install with `pip install literature`. Built for Python 3.6.0.
 Example gameplay:
 
 ```
->>> import literature
->>> l = literature.get_game(4)
+>>> from literature import get_game, Card, Suit
+>>> import logging
+>>> logging.basicConfig(level=logging.INFO)
+>>> l = get_game(4)
 >>> l.turn
 Player 3
 >>> l.players[3].hand_to_dict()
@@ -21,14 +23,16 @@ Suit.HEARTS: [A of H, 5 of H, J of H]
 Suit.SPADES: [A of S, Q of S]
 >>> move = l.players[3].asks(l.players[2]).to_give(Card.Name(3, Suit.DIAMONDS))
 >>> l.commit_move(move)
-Failure: Player 3 requested the 3 of D from Player 2
+INFO:literature.literature:Failure: Player 3 requested the 3 of D from Player 2
 ```
 
 Play against a model that I trained with:
 
 ```
-import literature
-literature.learning.play_against_model('literature/model_10000.out')
+>>> import literature
+>>> import logging
+>>> logging.basicConfig(level=logging.INFO)
+>>> literature.learning.play_against_model('literature/model_10000.out')
 ```
 
 See `literature.py` for documentation.

@@ -17,7 +17,7 @@ setup(
         'card-game'
     ],
     install_requires=[
-        'numpy==1.17.0',
+        'numpy==1.22.0',
         'pytest==5.0.1',
         'scikit-learn==0.21.3'
     ],

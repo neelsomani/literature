@@ -19,7 +19,7 @@ setup(
     install_requires=[
         'numpy==1.17.0',
         'pytest==5.0.1',
-        'scikit-learn==0.21.3'
+        'scikit-learn==1.5.0'
     ],
     classifiers=[
         'Development Status :: 5 - Production/Stable',

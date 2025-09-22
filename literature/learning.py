@@ -13,6 +13,24 @@ from typing import Dict, Optional, Set
 import numpy as np
 from sklearn.neural_network import MLPRegressor
 
+# scikit-learn renamed the public module housing MLPRegressor; ensure old
+# pickle references still resolve when loading pretrained models built with
+# older releases.
+try:  # pragma: no cover - exercised when loading legacy pickles
+    from sklearn.neural_network import _multilayer_perceptron as _mlp_module
+except ImportError:  # Older scikit-learn kept the public module name
+    try:
+        from sklearn.neural_network import multilayer_perceptron as _mlp_module
+    except ImportError:  # pragma: no cover - unexpected config
+        _mlp_module = None
+
+if _mlp_module is not None:
+    import sys
+
+    sys.modules.setdefault(
+        "sklearn.neural_network.multilayer_perceptron", _mlp_module
+    )
+
 from literature.actor import Actor
 from literature.card import Card, Suit
 from literature.constants import Half, SETS
